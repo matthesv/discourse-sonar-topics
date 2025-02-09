@@ -9,65 +9,33 @@ module ::DiscourseSonarTopics
         model   = SiteSetting.sonar_model
         prompt  = SiteSetting.sonar_prompt
   
-        # Domains aus den Einstellungen auslesen
-        include_domains = SiteSetting.sonar_include_domains.split(",").map(&:strip).reject(&:empty?)
-        exclude_domains = SiteSetting.sonar_exclude_domains.split(",").map(&:strip).reject(&:empty?).map { |d| d.start_with?('-') ? d : "-#{d}" }
-        # Kombinieren der beiden Listen; wenn keine Domains definiert sind, wird nil übergeben
-        domain_filter = (include_domains + exclude_domains).presence
+        include_domains = SiteSetting.sonar_include_domains
+        exclude_domains = SiteSetting.sonar_exclude_domains
+        recency_filter = SiteSetting.sonar_recency_filter
   
-        # Aktualitätsfilter aus den Einstellungen
-        recency_filter = SiteSetting.sonar_recency_filter.strip
-            
-        uri = URI.parse("https://api.perplexity.ai/chat/completions")
-        headers = {
-          "Content-Type"  => "application/json",
-          "Authorization" => "Bearer #{api_key}"
-        }
+        client = DiscourseSonarTopics::SonarApiClient.new(
+          api_key: api_key,
+          model: model,
+          prompt: prompt,
+          include_domains: include_domains,
+          exclude_domains: exclude_domains,
+          recency_filter: recency_filter
+        )
   
-        payload = {
-          "model" => model,
-          "messages" => [
-            {
-              "role"    => "user",
-              "content" => prompt
-            }
-          ],
-          # Falls domain_filter definiert ist, übergeben wir diesen Parameter
-          "search_domain_filter" => domain_filter,
-          # Setze den Aktualitätsfilter (z.B. "month", "week", "day", "hour")
-          "search_recency_filter" => recency_filter,
-          "max_tokens"        => 0,
-          "temperature"       => 0.7,
-          "top_p"             => 0.9,
-          "top_k"             => 0,
-          "stream"            => false,
-          "presence_penalty"  => 0,
-          "frequency_penalty" => 0
-        }
+        topic = client.generate_topic
   
-        begin
-          http = Net::HTTP.new(uri.host, uri.port)
-          http.use_ssl = true
-          request = Net::HTTP::Post.new(uri.request_uri, headers)
-          request.body = payload.to_json
-  
-          response = http.request(request)
-          result = JSON.parse(response.body)
-  
-          if result["choices"] && result["choices"][0] &&
-             result["choices"][0]["message"] && result["choices"][0]["message"]["content"]
-  
-            topic_content = result["choices"][0]["message"]["content"]
-            title = "Automatisch generiertes Thema"  # Hier kannst du noch Logik ergänzen, um einen Titel abzuleiten
-  
+        if topic[:content].present?
+          begin
             PostCreator.create!(Discourse.system_user,
-              title: title,
-              raw: topic_content,
+              title: topic[:title],
+              raw: topic[:content],
               skip_validations: true
             )
+          rescue => e
+            Rails.logger.error("SonarTopicCreationJob Fehler beim Erstellen des Themas: #{e.message}")
           end
-        rescue => e
-          Rails.logger.error("SonarTopicCreationJob Fehler: #{e}")
+        else
+          Rails.logger.error("SonarTopicCreationJob: Leerer Inhalt generiert, Thema wird nicht erstellt.")
         end
       end
     end
