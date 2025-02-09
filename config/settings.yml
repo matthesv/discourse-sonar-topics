@@ -1,0 +1,22 @@
+plugins:
+  sonar_topics_enabled:
+    default: false
+    client: true
+  sonar_api_key:
+    default: ""
+    client: true
+  sonar_model:
+    default: "sonar-pro"
+    client: true
+  sonar_prompt:
+    default: "Erstelle ein interessantes, aktuelles Forumthema."
+    client: true
+  sonar_include_domains:
+    default: "trusted.com, example.org"
+    client: true
+  sonar_exclude_domains:
+    default: "unwanted.com"
+    client: true
+  sonar_recency_filter:
+    default: "month"
+    client: true

@@ -1,0 +1,9 @@
+de:
+  site_settings:
+    sonar_topics_enabled: "Automatische Sonar-Themen aktivieren"
+    sonar_api_key: "Sonar API Schlüssel"
+    sonar_model: "Sonar Modell"
+    sonar_prompt: "Vordefinierter Prompt für neue Themen"
+    sonar_include_domains: "Zulässige Domains (kommagetrennt)"
+    sonar_exclude_domains: "Ausgeschlossene Domains (kommagetrennt, mit '-' vorangestellt optional)"
+    sonar_recency_filter: "Aktualitätsfilter (z.B. month, week, day, hour)"
